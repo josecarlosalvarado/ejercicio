@@ -69,14 +69,14 @@ def result():
 
 
 @app.route("/profile", methods=["GET"])
-def profie():
+def profile():
     session_token = request.cookies.get("session_token")
     user = db.query(User).filter_by(session_token=session_token).first()
 
     if user:
         return render_template("profile.html", user=user)
     else:
-        return rendirect(url_fro("index"))
+        return redirect(url_for("index"))
 
 
 @app.route("/profile/edit", methods=["GET", "POST"])
@@ -116,8 +116,10 @@ def profile_delete():
             return redirect(url_for("index"))
     elif request.method == "POST":
         if user:
-            db.delete(user)
+            user.deleted = True
+            db.add(user)
             db.commit()
+
             response = make_response(redirect(url_for("index")))
             response.set_cookie("session_token", user=user)
             return response
@@ -137,21 +139,32 @@ def user_details(user_id):
     return render_template("user_details.html", user=user)
 
 
-@app.route("/new/password", methods=["POST"])
+@app.route("/new/password", methods=["GET", "POST"])
 def new_password():
-    session_token = request.cookies.get("session_token")
-    user = db.query(User).filter_by(session_token=session_token).first()
-    old_password = request.form.get(old-password)
-    new_password = request.form.get(new-password)
-
-    if old_password and new_password:
-        hashed_old_password = hashlib.sha256(old_password.encode()).hexdigest()
-        hashed_new_password = hashlib.sha256(new_password.encode()).hexdigest()
-
-        if hashed_old_password == user.password:
-            user.password = hashed_new_password
+    if request.method == "GET":
+        session_token = request.cookies.get("session_token")
+        user = db.query(User).filter_by(session_token=session_token).first()
+        if user:
+            return render_template("new_password.html")
         else:
-            return "Wrong (old) password! Go back and try again."
+            return redirect(url_for("index"))
+
+    elif request.method == "POST":
+        old_password = request.form.get("old-password")
+        new_password = request.form.get("new-password")
+        session_token = request.cookies.get("session_token")
+
+        hashed_old_password = hashlib.sha256(old_password.encode()).hexdigest()
+        user = db.query(User).filter_by(password=hashed_old_password, session_token=session_token).first()
+
+        if user and new_password:
+            hashed_new_password = hashlib.sha256(new_password.encode()).hexdigest()
+            user.password = hashed_new_password
+            db.add(user)
+            db.commit()
+            return redirect(url_for("profile"))
+        else:
+            return "Error authenticating user."
 
 
 if __name__ == '__main__':
