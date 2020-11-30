@@ -99,7 +99,7 @@ def profile_edit():
 
             db.add(user)
             db.commit()
-
+            return redirect(url_for("profile"))
         else:
             return redirect(url_for("index"))
 
@@ -131,7 +131,10 @@ def list_users():
     return render_template("users.html", users=users)
 
 
-
+@app.route("/user/<int:user_id>", methods=["GET"])
+def user_details(user_id):
+    user = db.query(User).get(user_id)
+    return render_template("user_details.html", user=user)
 
 
 @app.route("/new/password", methods=["POST"])
